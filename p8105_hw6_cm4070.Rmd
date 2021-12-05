@@ -31,7 +31,7 @@ scale_fill_discrete = scale_fill_viridis_d
 
 ## Load and Clean the `Birthweight` Dataset
 
-This code will change the babysex numeric variable into a factor with 2 levels, "male" and "female", the frace numeric variable into factor variable with levels,  "white", "black", "asian", "puerto rican", "other", "unknown", and the m race variable into factor variable with levels "white", "black", "asian", "puerto rican", "other", and for missing values.
+This code will change the babysex numeric variable into a factor with 2 levels, "male" and "female", the frace numeric variable into factor variable with levels,  "white", "black", "asian", "puerto rican", "other", "unknown", and the m race variable into factor variable with levels "white", "black", "asian", "puerto rican", "other", and look for any missing values.
 
 ```{r}
 birthweight_data = read_csv("./birthweight.csv") %>% 
@@ -64,5 +64,23 @@ birthweight_data %>%
   modelr::add_predictions(fit) %>% 
   ggplot(aes(x = pred, y = resid)) +
   geom_point()
+```
+
+# Compare to other models
+
+This model uses length at birth and gestational age as predictors: 
+
+```{r}
+fit1 = lm(bwt ~ blength + gaweeks, data = birthweight_data)
+
+broom::tidy(fit1)
+```
+
+This model uses head circumference, length, sex, and all interactions between these as predictors
+
+```{r}
+fit2 = lm(bwt ~ bhead * blength * babysex, data = birthweight_data)
+
+broom::tidy(fit2)
 ```
 
