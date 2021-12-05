@@ -66,9 +66,9 @@ birthweight_data %>%
   geom_point()
 ```
 
-# Compare to other models
+## Compare to other models
 
-This model uses length at birth and gestational age as predictors: 
+This model uses length at birth and gestational age as predictors
 
 ```{r}
 fit1 = lm(bwt ~ blength + gaweeks, data = birthweight_data)
@@ -82,5 +82,42 @@ This model uses head circumference, length, sex, and all interactions between th
 fit2 = lm(bwt ~ bhead * blength * babysex, data = birthweight_data)
 
 broom::tidy(fit2)
+```
+
+## Cross validation
+
+This code will make a comparison between the models in terms of the cross-validated prediction error.
+
+```{r}
+cv_df =
+  crossv_mc(birthweight_data, 100) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
+```
+
+```{r}
+cv_df = 
+  cv_df %>% 
+  mutate(
+    mine_mod  = map(train, ~lm(bwt ~ babysex + delwt + gaweeks + mheight + momage + smoken, data = .x)),
+     maineffect_mod = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    interaction_mod = map(train, ~lm(bwt ~ bhead * blength * babysex, data = as_tibble(.x)))) %>% 
+  mutate(
+    rmse_mine = map2_dbl(mine_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_maineffect = map2_dbl(maineffect_mod, test, ~rmse(model = .x, data = .y)),
+    rmse_interaction = map2_dbl(interaction_mod, test, ~rmse(model = .x, data = .y)))
+```
+
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
 ```
 
