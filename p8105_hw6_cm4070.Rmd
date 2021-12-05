@@ -141,10 +141,68 @@ weather_df =
 
 Plot of tmin and tmax for `weather` dataframe
 
-```{r}
+```{r, message = FALSE}
 weather_df %>% 
   ggplot(aes(x = tmin, y = tmax)) + 
   geom_point() + 
   geom_smooth(method = "lm")
 ```
 
+## Bootstrapping 
+
+The code below will use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of R^2 and log(b0*b1)
+
+
+```{r}
+weather_bootstrap1 = 
+  weather_df %>% 
+  modelr::bootstrap(n = 5000, id = "strap_number") %>% 
+  mutate(
+    models = map(strap, ~ lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::tidy)) %>% 
+  select(strap_number, results) %>% 
+  unnest(results) 
+
+weather_bootstrap1
+```
+
+```{r}
+weather_bootstrap2 = 
+  weather_df %>% 
+  modelr::bootstrap(n = 5000, id = "strap_number") %>% 
+  mutate(
+    models = map(strap, ~ lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::glance)) %>% 
+  select(strap_number, results) %>% 
+  unnest(results)
+
+weather_bootstrap2
+```
+
+## Plot of r.squared estimatew
+
+```{r}
+bootstrapplot_r = 
+weather_bootstrap2 %>% 
+ggplot(aes(x = r.squared)) + geom_density()
+```
+
+## Plot of log(B^0*B^1) estimates
+
+```{r}
+bootstrapplot_log = 
+weather_bootstrap1 %>% 
+  select(strap_number, term, estimate) %>%
+  pivot_wider(names_from = "term",
+            values_from = "estimate") %>%
+  rename(b0 = `(Intercept)`) %>% 
+  rename(b1 = tmin) %>% 
+  mutate(log_betas = log(b0*b1)) %>% 
+  ggplot(aes(x = log_betas)) + geom_density()
+```
+
+## Plot of both estimates
+
+```{r}
+bootstrapplot_r + bootstrapplot_log
+```
